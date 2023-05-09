@@ -26,13 +26,13 @@ namespace Wimm.Machines.Impl.Caucasus
         public Caucasus(string tpipIpAddress, HwndSource hwnd) :base(tpipIpAddress, hwnd)
         {
             if (Camera is Tpip4Camera camera){ hwnd.AddHook(camera.WndProc); }
-            (CanMessageFrames,StructuredModules)  = CreateStructuredModule();
+            (CanMessageFrames,StructuredModules)  = CreateStructuredModule(()=>SpeedModifier);
         }
         public Caucasus() : base()
         {
-            (CanMessageFrames,StructuredModules) = CreateStructuredModule();
+            (CanMessageFrames,StructuredModules) = CreateStructuredModule(()=>SpeedModifier);
         }
-        private static (IEnumerable<CanCommunicationUnit>,ModuleGroup) CreateStructuredModule()
+        private static (IEnumerable<CanCommunicationUnit>,ModuleGroup) CreateStructuredModule(Func<double> speedModifierProvider)
         {
             CanCommunicationUnit CrawlersCanFrame = new CanCommunicationUnit(
                 new()
@@ -47,6 +47,7 @@ namespace Wimm.Machines.Impl.Caucasus
             {
                 CrawlersCanFrame
             };
+            
             var structuredModules= new ModuleGroup("modules",
                 ImmutableArray.Create(
                     new ModuleGroup("crawlers",
@@ -54,11 +55,13 @@ namespace Wimm.Machines.Impl.Caucasus
                         ImmutableArray.Create<Module>(
                             new CaucasusMotor(
                                 "right","機動用右クローラー",
-                                CrawlersCanFrame,CaucasusMotor.DriverPort.M1
+                                CrawlersCanFrame,CaucasusMotor.DriverPort.M1,
+                                speedModifierProvider
                             ),
                             new CaucasusMotor(
                                 "left", "機動用左クローラー",
-                                CrawlersCanFrame, CaucasusMotor.DriverPort.M2
+                                CrawlersCanFrame, CaucasusMotor.DriverPort.M2,
+                                speedModifierProvider
                             )
                         )
                     )
