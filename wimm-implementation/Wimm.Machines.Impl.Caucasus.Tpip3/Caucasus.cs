@@ -72,7 +72,7 @@ namespace Wimm.Machines.Impl.Caucasus.Tpip3
         }
         public override ControlProcess StartControlProcess()
         {
-            return base.StartControlProcess();
+            return new CaucasusControlProcess(this);
         }
         class CaucasusControlProcess : ControlProcess
         {
