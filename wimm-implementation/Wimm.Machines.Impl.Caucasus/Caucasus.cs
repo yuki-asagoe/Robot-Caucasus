@@ -11,6 +11,7 @@ using Wimm.Machines.Impl.Caucasus.Component;
 
 namespace Wimm.Machines.Impl.Caucasus
 {
+    [LoadTarget]
     public class Caucasus : TpipForRasberryPiMachine
     {
         public override string Name => "コーカサス";

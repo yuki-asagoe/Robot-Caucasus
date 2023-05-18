@@ -16,12 +16,12 @@ void setup(){
 
   motorInit();
 
-  CanCom.begin(can_address, CAN_250KBPS); 
+  CanCom.begin(CAN_Self_Address, CAN_Speed); 
   CanCom.onReceive(on_receive_can);
 
   Serial.println("Ready to Drive - motors in Caucasus");
   Serial.print("My can destination id is\"");
-  Serial.print(can_address,DEC);
+  Serial.print(CAN_Self_Address,DEC);
   Serial.println("\". Git Repository - https://github.com/yuki-asagoe/Robot-Caucasus");
 }
 
@@ -47,7 +47,7 @@ void on_receive_can(uint16_t std_id, const int8_t *data, uint8_t len) {
   uint8_t msg_type = CanCommunication::getDataTypeFromStdId(std_id);
   uint8_t dest = CanCommunication::getDestFromStdId(std_id);  
   
-  if(dest!=can_address || dest!=0){return;}
+  if(dest!=CAN_Self_Address || dest!=0){return;}
   
   switch(msg_type){
     case CAN_DATA_TYPE_COMMAND:{
@@ -77,6 +77,6 @@ void warn(char* msg){
   Serial.print("Warning: ");
   Serial.print(msg);
   Serial.print(" -by motor drive(id:");
-  Serial.print(can_address,DEC);
+  Serial.print(CAN_Self_Address,DEC);
   Serial.println(")");
 }

@@ -11,6 +11,7 @@ using Wimm.Machines.Impl.Caucasus.Tpip3.Component;
 
 namespace Wimm.Machines.Impl.Caucasus.Tpip3
 {
+    [LoadTarget]
     public class Caucasus : Tpip3Machine
     {
         public override string Name => "コーカサス";
