@@ -34,7 +34,7 @@ namespace Wimm.Machines.Impl.Caucasus.Tpip3
         }
         private static (IEnumerable<CanCommunicationUnit>, ModuleGroup) CreateStructuredModule(Func<double> speedModifierProvider)
         {
-            CanCommunicationUnit CrawlersCanFrame = new CanCommunicationUnit(
+            CanCommunicationUnit CrawlersCanFrame = new(
                 new()
                 {
                     DestinationAddress = (CanDestinationAddress)1,
@@ -43,9 +43,19 @@ namespace Wimm.Machines.Impl.Caucasus.Tpip3
                 },
                 4
             );
+            CanCommunicationUnit CrawlersUpDownCanFrame = new(
+                new()
+                {
+                    DestinationAddress=(CanDestinationAddress)2,
+                    SourceAddress=CanDestinationAddress.BroadCast,
+                    MessageType=CanDataType.Command
+                },
+                4
+            );
             var canFrames = new CanCommunicationUnit[]
             {
-                CrawlersCanFrame
+                CrawlersCanFrame,
+                CrawlersUpDownCanFrame
             };
 
             var structuredModules = new ModuleGroup("modules",
@@ -61,6 +71,11 @@ namespace Wimm.Machines.Impl.Caucasus.Tpip3
                             new CaucasusMotor(
                                 "left", "機動用左クローラー",
                                 CrawlersCanFrame, CaucasusMotor.DriverPort.M2,
+                                speedModifierProvider
+                            ),
+                            new CaucasusMotor(
+                                "updown","クローラー上下用モーター",
+                                CrawlersUpDownCanFrame,CaucasusMotor.DriverPort.M1,
                                 speedModifierProvider
                             )
                         )
