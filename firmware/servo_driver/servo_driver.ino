@@ -23,7 +23,7 @@ void setup(){
   pwm.setPWMFreq(PWM_Frequency); //50Hz
 
   CanCom.begin(CAN_Self_Address, CAN_Speed); 
-  CanCom.setReceiveFilter(false);
+  CanCom.setReceiveFilter(true);
   CanCom.onReceive(on_receive_can);
 
   for(int i=0;i<8;i++){
@@ -75,12 +75,21 @@ void on_receive_can(uint16_t std_id, const int8_t *data, uint8_t len) {
     case CAN_DATA_TYPE_COMMAND:{
       for(uint8_t i=0;i<len;i++){
         uint8_t angle=(uint8_t)data[i];
-        if(angle==255){continue;}//値255は無視
         if(angle==255){
+          Serial.println("Control Skipped");
+          continue;
+        }//値255は無視
+        if(angle==254){
+          Serial.println("Angle Reset");
           set_servo_angle(i,Servo_Initial_Angle[i]);
+          continue;
         }
+        Serial.print("Angle set : ");
+        Serial.print(angle);
+        Serial.println("");
         set_servo_angle(i,angle);
       }
+      break;
     }
     case CAN_DATA_TYPE_EMERGENCY:{
       Serial.println("Emergency Code Detected");
