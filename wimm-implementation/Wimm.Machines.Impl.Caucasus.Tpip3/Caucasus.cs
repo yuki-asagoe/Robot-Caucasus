@@ -1,11 +1,9 @@
-﻿using Wimm.Machines.Audio;
-using Wimm.Machines.Tpip3;
+﻿using Wimm.Machines.Tpip3;
 using Wimm.Machines.Video;
 using Wimm.Machines;
 using Wimm.Machines.Component;
 using System.Windows.Interop;
 using System.Collections.Immutable;
-using Wimm.Machines.Impl.Caucasus.Tpip3.Audio;
 using Wimm.Machines.Impl.Caucasus.Tpip3.Can;
 using Wimm.Machines.Impl.Caucasus.Tpip3.Component;
 
@@ -15,10 +13,6 @@ namespace Wimm.Machines.Impl.Caucasus.Tpip3
     public class Caucasus : Tpip3Machine
     {
         public override string Name => "コーカサス";
-
-        public override Speaker Speaker { get; } = new CaucasusSpeaker();
-
-        public override Microphone Microphone => new CaucasusMicrophone();
 
         public override Camera Camera { get; } = new Tpip3Camera(
             "カメラ1"

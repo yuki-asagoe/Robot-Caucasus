@@ -1,6 +1,4 @@
-﻿using Wimm.Machines.Audio;
-using Wimm.Machines.Impl.Caucasus.Audio;
-using Wimm.Machines.TpipForRasberryPi;
+﻿using Wimm.Machines.TpipForRasberryPi;
 using Wimm.Machines.Video;
 using Wimm.Machines;
 using Wimm.Machines.Component;
@@ -15,10 +13,6 @@ namespace Wimm.Machines.Impl.Caucasus
     public class Caucasus : TpipForRasberryPiMachine
     {
         public override string Name => "コーカサス";
-
-        public override Speaker Speaker { get; }= new CaucasusSpeaker();
-
-        public override Microphone Microphone => new CaucasusMicrophone();
 
         public override Camera Camera { get; } = new Tpip4Camera(
             "カメラ1"
