@@ -73,9 +73,11 @@ void on_receive_can(uint16_t std_id, const int8_t *data, uint8_t len) {
   
   switch(msg_type){
     case CAN_DATA_TYPE_COMMAND:{
+      int skip_count=0;
       for(uint8_t i=0;i<len;i++){
         uint8_t angle=(uint8_t)data[i];
         if(angle==255){
+          skip_count++;
           Serial.println("Control Skipped");
           continue;
         }//値255は無視
@@ -88,6 +90,12 @@ void on_receive_can(uint16_t std_id, const int8_t *data, uint8_t len) {
         Serial.print(angle);
         Serial.println("");
         set_servo_angle(i,angle);
+      }
+      if(skip_count>=8){
+        Serial.println("Reboot Servos");      
+        digitalWrite(SERVO_OFF, HIGH);
+        delay(1000);
+        digitalWrite(SERVO_OFF, LOW);
       }
       break;
     }
@@ -108,11 +116,11 @@ void warn(char* msg){
 }
 
 void set_servo_angle(uint8_t n, int deg) {
-    if(deg < 0) deg = 0;
-    if(deg > 255) deg = 360;
-    double width = Servo_Max_Pulse_Width[n] - Servo_Min_Pulse_Width[n]; //パルス幅の変域の大きさ、ミリ秒
-    double pulse = (deg) / 180 * width + Servo_Min_Pulse_Width[n]; //やってることは単なる線形補完のようなもの
-    set_servo_pulse(n, pulse);
+  if(deg < 0) deg = 0;
+  if(deg > 255) deg = 255;
+  double width = Servo_Max_Pulse_Width[n] - Servo_Min_Pulse_Width[n]; //パルス幅の変域の大きさ、ミリ秒
+  double pulse = (deg) / 180.0 * width + Servo_Min_Pulse_Width[n]; //やってることは単なる線形補完のようなもの
+  set_servo_pulse(n, pulse);
 }
 
 // pulse の時間単位はマイクロ秒

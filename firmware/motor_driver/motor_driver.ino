@@ -16,8 +16,7 @@ void setup(){
 
   motorInit();
 
-  CanCom.begin(CAN_Self_Address, CAN_Speed); 
-  CanCom.setReceiveFilter(false);
+  CanCom.begin(CAN_Self_Address, CAN_Speed);
   CanCom.onReceive(on_receive_can);
 
   Serial.println("Ready to Drive - motors in Caucasus");
