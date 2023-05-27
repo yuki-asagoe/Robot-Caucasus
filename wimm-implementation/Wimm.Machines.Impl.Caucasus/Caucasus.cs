@@ -17,7 +17,7 @@ namespace Wimm.Machines.Impl.Caucasus
         public override Camera Camera { get; } = new Tpip4Camera(
             "カメラ1"
         );
-        IEnumerable<CanCommunicationUnit> CanMessageFrames { get; }
+        IEnumerable<(bool needResetToZero, CanCommunicationUnit messageFrame)> CanMessageFrames { get; }
         public Caucasus(string tpipIpAddress, HwndSource hwnd) :base(tpipIpAddress, hwnd)
         {
             if (Camera is Tpip4Camera camera){ hwnd.AddHook(camera.WndProc); }
@@ -27,7 +27,7 @@ namespace Wimm.Machines.Impl.Caucasus
         {
             (CanMessageFrames,StructuredModules) = CreateStructuredModule(()=>SpeedModifier);
         }
-        private static (IEnumerable<CanCommunicationUnit>,ModuleGroup) CreateStructuredModule(Func<double> speedModifierProvider)
+        private static (IEnumerable<(bool needResetToZero, CanCommunicationUnit messageFrame)>,ModuleGroup) CreateStructuredModule(Func<double> speedModifierProvider)
         {
             CanCommunicationUnit CrawlersCanFrame = new(
                 new()
@@ -47,10 +47,10 @@ namespace Wimm.Machines.Impl.Caucasus
                 },
                 4
             );
-            var canFrames = new CanCommunicationUnit[]
+            var canFrames = new (bool needReset, CanCommunicationUnit messageFrame)[]
             {
-                CrawlersCanFrame,
-                CrawlersUpDownCanFrame
+                (true,CrawlersCanFrame),
+                (true,CrawlersUpDownCanFrame)
             };
             
             var structuredModules= new ModuleGroup("modules",
@@ -90,10 +90,20 @@ namespace Wimm.Machines.Impl.Caucasus
             public CaucasusControlProcess(Caucasus caucasus)
             {
                 Caucasus = caucasus;
+                foreach (var (needReset, message) in Caucasus.CanMessageFrames)
+                {
+                    if (needReset)
+                    {
+                        for (int i = 0; i < message.Data.Length; i++)
+                        {
+                            message.Data[i] = 0;
+                        }
+                    }
+                }
             }
             public override void Dispose()
             {
-                foreach(var message in Caucasus.CanMessageFrames)
+                foreach(var (_, message) in Caucasus.CanMessageFrames)
                 {
                     message.Send();
                 }
