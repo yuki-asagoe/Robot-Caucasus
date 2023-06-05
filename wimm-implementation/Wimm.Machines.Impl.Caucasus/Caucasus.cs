@@ -74,6 +74,16 @@ namespace Wimm.Machines.Impl.Caucasus
                                 speedModifierProvider
                             )
                         )
+                    ),
+                    new ModuleGroup("arm",
+                        ImmutableArray.Create<ModuleGroup>(),
+                        ImmutableArray.Create<Module>(
+                            new CaucasusMotor(
+                                "root","アーム根本モーター",
+                                CrawlersUpDownCanFrame, CaucasusMotor.DriverPort.M2,
+                                speedModifierProvider
+                            )
+                        )
                     )
                 ),
                 ImmutableArray.Create<Module>()
