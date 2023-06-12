@@ -18,9 +18,9 @@ namespace Wimm.Machines.Impl.Caucasus
             "カメラ1"
         );
         IEnumerable<(bool needResetToZero, CanCommunicationUnit messageFrame)> CanMessageFrames { get; }
-        public Caucasus(string tpipIpAddress, HwndSource hwnd) :base(tpipIpAddress, hwnd)
+        public Caucasus(MachineConstructorArgs args) :base(args)
         {
-            if (Camera is Tpip4Camera camera){ hwnd.AddHook(camera.WndProc); }
+            if (Camera is Tpip4Camera camera){ Hwnd?.AddHook(camera.WndProc); }
             (CanMessageFrames,StructuredModules)  = CreateStructuredModule(()=>SpeedModifier);
         }
         public Caucasus() : base()
@@ -90,7 +90,7 @@ namespace Wimm.Machines.Impl.Caucasus
             );
             return (canFrames, structuredModules);
         }
-        public override ControlProcess StartControlProcess()
+        protected override ControlProcess StartControlProcess()
         {
             return new CaucasusControlProcess(this);
         }
