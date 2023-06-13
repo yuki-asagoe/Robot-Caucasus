@@ -6,6 +6,8 @@ using System.Windows.Interop;
 using System.Collections.Immutable;
 using Wimm.Machines.Impl.Caucasus.Can;
 using Wimm.Machines.Impl.Caucasus.Component;
+using Wimm.Machines.TpipForRasberryPi.Import;
+using System.Runtime.InteropServices;
 
 namespace Wimm.Machines.Impl.Caucasus
 {
@@ -18,16 +20,22 @@ namespace Wimm.Machines.Impl.Caucasus
             "カメラ1"
         );
         IEnumerable<(bool needResetToZero, CanCommunicationUnit messageFrame)> CanMessageFrames { get; }
+        TPJT4.OUT_DT_STR PwmAndDigitalOutputData { get; set; }
         public Caucasus(MachineConstructorArgs args) :base(args)
         {
             if (Camera is Tpip4Camera camera){ Hwnd?.AddHook(camera.WndProc); }
-            (CanMessageFrames,StructuredModules)  = CreateStructuredModule(()=>SpeedModifier);
+            (CanMessageFrames,StructuredModules)  = CreateStructuredModule(this,()=>SpeedModifier);
+            PwmAndDigitalOutputData = new TPJT4.OUT_DT_STR()
+            {
+                PWM = new short[4],
+                PWM2 = new short[16]
+            };
         }
         public Caucasus() : base()
         {
-            (CanMessageFrames,StructuredModules) = CreateStructuredModule(()=>SpeedModifier);
+            (CanMessageFrames,StructuredModules) = CreateStructuredModule(this,()=>SpeedModifier);
         }
-        private static (IEnumerable<(bool needResetToZero, CanCommunicationUnit messageFrame)>,ModuleGroup) CreateStructuredModule(Func<double> speedModifierProvider)
+        private static (IEnumerable<(bool needResetToZero, CanCommunicationUnit messageFrame)>,ModuleGroup) CreateStructuredModule(Caucasus parent,Func<double> speedModifierProvider)
         {
             CanCommunicationUnit CrawlersCanFrame = new(
                 new()
@@ -82,6 +90,22 @@ namespace Wimm.Machines.Impl.Caucasus
                                 "root","アーム根本モーター",
                                 CrawlersUpDownCanFrame, CaucasusMotor.DriverPort.M2,
                                 speedModifierProvider
+                            ),
+                            new CaucasusServo(
+                                "grip","アーム掴みサーボ",
+                                0,180,parent.PwmAndDigitalOutputData.PWM,0,speedModifierProvider
+                            ),
+                            new CaucasusServo(
+                                "yaw", "アーム左右サーボ",
+                                0, 180, parent.PwmAndDigitalOutputData.PWM, 1, speedModifierProvider
+                            ),
+                            new CaucasusServo(
+                                "pitch", "アーム上下サーボ",
+                                0, 180, parent.PwmAndDigitalOutputData.PWM, 2, speedModifierProvider
+                            ),
+                            new CaucasusServo(
+                                "roll", "アームひねりサーボ",
+                                0, 180, parent.PwmAndDigitalOutputData.PWM, 3, speedModifierProvider
                             )
                         )
                     )
@@ -110,6 +134,8 @@ namespace Wimm.Machines.Impl.Caucasus
                         }
                     }
                 }
+                var ctrlData = caucasus.PwmAndDigitalOutputData;
+                var _=TPJT4.NativeMethods.set_ctrl(ref ctrlData, Marshal.SizeOf<TPJT4.OUT_DT_STR>());
             }
             public override void Dispose()
             {
