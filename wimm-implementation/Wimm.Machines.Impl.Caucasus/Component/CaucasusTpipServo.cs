@@ -11,13 +11,13 @@ namespace Wimm.Machines.Impl.Caucasus.Component
     // PWM周波数は50Hz(周期20ms),パルス幅0.5ms~2.5ms
     // Tpip4はFull PWMモードじゃないと多分このパルス幅に対応できない
     // てかなんだよRC PWMモードのパルス幅0.8ms~2.2msって
-    internal class CaucasusServo : ServoMotor
+    internal class CaucasusTpipServo : ServoMotor
     {
         Func<double> SpeedModifierProvider { get; }
         const double MaxSpeed = 15;
         short[] PwmOutput { get; }
         int Index { get; }
-        public CaucasusServo(string name, string description, double minAngle, double maxAngle, short[] tpipPWMOutputArray,int index,Func<double> speedModifierProvider) : base(name, description, Math.Max(0,minAngle), Math.Min(180,maxAngle))
+        public CaucasusTpipServo(string name, string description, double minAngle, double maxAngle, short[] tpipPWMOutputArray,int index,Func<double> speedModifierProvider) : base(name, description, Math.Max(0,minAngle), Math.Min(180,maxAngle))
         {
             SpeedModifierProvider = speedModifierProvider;
             PwmOutput = tpipPWMOutputArray;

@@ -1,13 +1,9 @@
 ﻿using Wimm.Machines.TpipForRasberryPi;
 using Wimm.Machines.Video;
-using Wimm.Machines;
-using Wimm.Machines.Component;
-using System.Windows.Interop;
 using System.Collections.Immutable;
 using Wimm.Machines.Impl.Caucasus.Can;
 using Wimm.Machines.Impl.Caucasus.Component;
-using Wimm.Machines.TpipForRasberryPi.Import;
-using System.Runtime.InteropServices;
+using Wimm.Machines.Impl.Caucasus.PCA9685;
 
 namespace Wimm.Machines.Impl.Caucasus
 {
@@ -19,17 +15,12 @@ namespace Wimm.Machines.Impl.Caucasus
         public override Camera Camera { get; } = new Tpip4Camera(
             "カメラ1"
         );
+        private AdafruitServoDriver AdafruitServoDriver = new AdafruitServoDriverByTpip(AdafruitServoDriver.DefaultSlaveID, 0);
         IEnumerable<(bool needResetToZero, CanCommunicationUnit messageFrame)> CanMessageFrames { get; }
-        TPJT4.OUT_DT_STR PwmAndDigitalOutputData { get; set; }
         public Caucasus(MachineConstructorArgs args) :base(args)
         {
             if (Camera is Tpip4Camera camera){ Hwnd?.AddHook(camera.WndProc); }
             (CanMessageFrames,StructuredModules)  = CreateStructuredModule(this,()=>SpeedModifier);
-            PwmAndDigitalOutputData = new TPJT4.OUT_DT_STR()
-            {
-                PWM = new short[4],
-                PWM2 = new short[16]
-            };
         }
         public Caucasus() : base()
         {
@@ -91,21 +82,21 @@ namespace Wimm.Machines.Impl.Caucasus
                                 CrawlersUpDownCanFrame, CaucasusMotor.DriverPort.M2,
                                 speedModifierProvider
                             ),
-                            new CaucasusServo(
+                            new CaucasusPCA9685Servo(
                                 "grip","アーム掴みサーボ",
-                                0,180,parent.PwmAndDigitalOutputData.PWM,0,speedModifierProvider
+                                0,180,parent.AdafruitServoDriver,0,speedModifierProvider
                             ),
-                            new CaucasusServo(
+                            new CaucasusPCA9685Servo(
                                 "yaw", "アーム左右サーボ",
-                                0, 180, parent.PwmAndDigitalOutputData.PWM, 1, speedModifierProvider
+                                0, 180, parent.AdafruitServoDriver, 1, speedModifierProvider
                             ),
-                            new CaucasusServo(
+                            new CaucasusPCA9685Servo(
                                 "pitch", "アーム上下サーボ",
-                                0, 180, parent.PwmAndDigitalOutputData.PWM, 2, speedModifierProvider
+                                0, 180, parent.AdafruitServoDriver, 2, speedModifierProvider
                             ),
-                            new CaucasusServo(
+                            new CaucasusPCA9685Servo(
                                 "roll", "アームひねりサーボ",
-                                0, 180, parent.PwmAndDigitalOutputData.PWM, 3, speedModifierProvider
+                                0, 180, parent.AdafruitServoDriver, 3, speedModifierProvider
                             )
                         )
                     )
@@ -134,8 +125,6 @@ namespace Wimm.Machines.Impl.Caucasus
                         }
                     }
                 }
-                var ctrlData = caucasus.PwmAndDigitalOutputData;
-                var _=TPJT4.NativeMethods.set_ctrl(ref ctrlData, Marshal.SizeOf<TPJT4.OUT_DT_STR>());
             }
             public override void Dispose()
             {
