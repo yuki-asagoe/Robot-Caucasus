@@ -47,6 +47,7 @@ namespace Wimm.Machines.Impl.Caucasus.PCA9685
             WriteByte(ModeRegister.Mode1, oldMode);
 
             // delay(5);
+            Thread.Sleep(5); // 代用。このメソッドの精度を考えると正確に5ms待機はできないだろうけど、無いよりは...
 
             WriteByte(ModeRegister.Mode1, oldMode | Mode1Bits.Restart | Mode1Bits.AllCall);
         }
