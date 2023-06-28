@@ -37,7 +37,7 @@ namespace Wimm.Machines.Impl.Caucasus.Component
         );
         public void RotateImpl(double speed)
         {
-            speed = Math.Clamp(speed, 0, 1);
+            speed = Math.Clamp(speed, -1, 1);
             Angle += speed * SpeedModifierProvider() * MaxSpeed;
             ApplyAngle(Angle);
         }

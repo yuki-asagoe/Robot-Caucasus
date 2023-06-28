@@ -30,37 +30,31 @@ namespace Wimm.Machines.Impl.Caucasus.PCA9685
                 (byte)(offTick >> 8)
             });
         }
-        public void SetPWMFrequency(float frequency)
+        public bool SetPWMFrequency(float frequency)
         {
-            if (!CheckInitialized()) return;
-            var readData=ReadByte(ModeRegister.Mode1);
-            if (readData is null) return;
-            var oldMode = (Mode1Bits)readData;
+            var oldMode = Mode1Bits.Restart;
 
             frequency = Math.Clamp(frequency, 1, 3500);
             float prescaleval = ((OscillatorFrequency / (frequency * 4096.0f)) + 0.5f) - 1;
             byte prescale = (byte)Math.Clamp(prescaleval, 3, 255);
 
             Mode1Bits newMode = (oldMode & ~Mode1Bits.Restart) | Mode1Bits.Sleep;
-            WriteByte(ModeRegister.Mode1, newMode);
-            WriteByte(ModeRegister.Prescale, prescale);
-            WriteByte(ModeRegister.Mode1, oldMode);
+            bool success = true;
+            success&=WriteByte(ModeRegister.Mode1, newMode);
+            success&=WriteByte(ModeRegister.Prescale, prescale);
+            success &= WriteByte(ModeRegister.Mode1, oldMode);
 
             // delay(5);
             Thread.Sleep(5); // 代用。このメソッドの精度を考えると正確に5ms待機はできないだろうけど、無いよりは...
 
-            WriteByte(ModeRegister.Mode1, oldMode | Mode1Bits.Restart | Mode1Bits.AllCall);
+            success &= WriteByte(ModeRegister.Mode1, oldMode | Mode1Bits.Restart | Mode1Bits.AutoIncrement);
+            return success;
         }
         private bool CheckInitialized() => Initialized || Initialize();
         private bool Initialize()
         {
             if (Initialized) return true;
-            if (Initialized = Reset())
-            {
-                SetPWMFrequency(50);
-                return true;
-            }
-            else return false;
+            return Initialized = (Reset() && SetPWMFrequency(50));
         }
         private bool Reset() =>
             WriteByte(ModeRegister.Mode1, Mode1Bits.Restart);
@@ -88,7 +82,7 @@ namespace Wimm.Machines.Impl.Caucasus.PCA9685
             ExtraClock=0x40,
             Restart=0x80
         }
-        public static readonly byte DefaultSlaveID = 0x40;
+        public static readonly byte DefaultSlaveID = 0x42;
         private static readonly float DefaultOscillatorFrequency = 25000000;
     }
     internal class AdafruitServoDriverByTpip : AdafruitServoDriver
@@ -121,6 +115,6 @@ namespace Wimm.Machines.Impl.Caucasus.PCA9685
             TPJT4.NativeMethods.Send_I2Cdata(TpipBoardNumber, data, SlaveID, data.Length) is not 0;
 
         protected override bool WriteByte(ModeRegister registerAddr, byte data) =>
-            TPJT4.NativeMethods.Send_I2Cdata(TpipBoardNumber, new byte[] { data }, SlaveID, 1) is not 0;
+            TPJT4.NativeMethods.Send_I2Cdata(TpipBoardNumber, new byte[] { (byte)registerAddr ,data }, SlaveID, 1) is not 0;
     }
 }
