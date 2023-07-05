@@ -18,6 +18,7 @@ void setup(){
   pinMode(STAT_LED1, OUTPUT); // CAN メッセージ受信したら光る
   pinMode(STAT_LED2, OUTPUT); // CAN制御信号が1秒途切れたら光る
   pinMode(SERVO_OFF, OUTPUT);
+  digitalWrite(SERVO_OFF, LOW);
 
   pwm.begin();
   pwm.setPWMFreq(PWM_Frequency); //50Hz
@@ -30,8 +31,8 @@ void setup(){
     set_servo_angle(i,Servo_Initial_Angle[i]);
   }
 
-  Serial.println("Ready to Drive - servos on Caucasus");
-  Serial.print("My can destination id is\"");
+  Serial.println("Ready to Drive - servo driver on Caucasus");
+  Serial.print("Can destination ID is\"");
   Serial.print(CAN_Self_Address,DEC);
   Serial.println("\". Git Repository - https://github.com/yuki-asagoe/Robot-Caucasus");
 }
@@ -74,14 +75,16 @@ void on_receive_can(uint16_t std_id, const int8_t *data, uint8_t len) {
   switch(msg_type){
     case CAN_DATA_TYPE_COMMAND:{
       int skip_count=0;
+      int reset_count=0;
       for(uint8_t i=0;i<len;i++){
         uint8_t angle=(uint8_t)data[i];
-        if(angle==255){
+        if(angle==255){//値255は無視
           skip_count++;
           Serial.println("Control Skipped");
           continue;
-        }//値255は無視
+        }
         if(angle==254){
+          reset_count++;
           Serial.println("Angle Reset");
           set_servo_angle(i,Servo_Initial_Angle[i]);
           continue;
@@ -91,9 +94,12 @@ void on_receive_can(uint16_t std_id, const int8_t *data, uint8_t len) {
         Serial.println("");
         set_servo_angle(i,angle);
       }
-      if(skip_count>=8){
+      if(skip_count>=len||reset_count>=len){
         Serial.println("Reboot Servos");      
         digitalWrite(SERVO_OFF, HIGH);
+        for(int i=0;i<len;i++){
+          set_servo_angle(i,Servo_Initial_Angle[i]);
+        }
         delay(1000);
         digitalWrite(SERVO_OFF, LOW);
       }
@@ -117,9 +123,9 @@ void warn(char* msg){
 
 void set_servo_angle(uint8_t n, int deg) {
   if(deg < 0) deg = 0;
-  if(deg > 255) deg = 255;
+  if(deg > Servo_Max_Angle[n]) deg = Servo_Max_Angle[n];
   double width = Servo_Max_Pulse_Width[n] - Servo_Min_Pulse_Width[n]; //パルス幅の変域の大きさ、ミリ秒
-  double pulse = (deg) / 180.0 * width + Servo_Min_Pulse_Width[n]; //やってることは単なる線形補完のようなもの
+  double pulse = (deg / Servo_Max_Angle[n]) * width + Servo_Min_Pulse_Width[n]; //やってることは単なる線形補完のようなもの
   set_servo_pulse(n, pulse);
 }
 
@@ -128,7 +134,7 @@ void set_servo_angle(uint8_t n, int deg) {
 void set_servo_pulse(uint8_t n, double pulse) {
   double pulselength = 1000000;   // 1,000,000 マイクロ秒/秒
   pulselength /= PWM_Frequency;   // pwm一周期のマイクロ秒
-  pulselength /= 4096;  // 12 bitsで一周期をカウントするとして1ティックあたりのマイクロ秒
+  pulselength /= 4096;  // 4096 tickで一周期をカウントするとして1ティックあたりのマイクロ秒
   pulse /= pulselength; // 指定されたパルス幅を表現できるティック数の取得
   pwm.setPWM(n, 0, pulse); // ティック数の指定
 }
