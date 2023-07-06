@@ -15,18 +15,17 @@ namespace Wimm.Machines.Impl.Caucasus
         public override Camera Camera { get; } = new Tpip4Camera(
             "カメラ1"
         );
-        private AdafruitServoDriver AdafruitServoDriver = new AdafruitServoDriverByTpip(AdafruitServoDriver.DefaultSlaveID, 0);
-        IEnumerable<(bool needResetToZero, CanCommunicationUnit messageFrame)> CanMessageFrames { get; }
+        IEnumerable<(Action? Resetter, CanCommunicationUnit messageFrame)> CanMessageFrames { get; }
         public Caucasus(MachineConstructorArgs args) :base(args)
         {
             if (Camera is Tpip4Camera camera){ Hwnd?.AddHook(camera.WndProc); }
-            (CanMessageFrames,StructuredModules)  = CreateStructuredModule(this,()=>SpeedModifier);
+            (CanMessageFrames,StructuredModules)  = CreateStructuredModule(()=>SpeedModifier);
         }
         public Caucasus() : base()
         {
-            (CanMessageFrames,StructuredModules) = CreateStructuredModule(this,()=>SpeedModifier);
+            (CanMessageFrames,StructuredModules) = CreateStructuredModule(()=>SpeedModifier);
         }
-        private static (IEnumerable<(bool needResetToZero, CanCommunicationUnit messageFrame)>,ModuleGroup) CreateStructuredModule(Caucasus parent,Func<double> speedModifierProvider)
+        private static (IEnumerable<(Action? Resetter, CanCommunicationUnit messageFrame)>,ModuleGroup) CreateStructuredModule(Func<double> speedModifierProvider)
         {
             CanCommunicationUnit CrawlersCanFrame = new(
                 new()
@@ -46,10 +45,26 @@ namespace Wimm.Machines.Impl.Caucasus
                 },
                 4
             );
-            var canFrames = new (bool needReset, CanCommunicationUnit messageFrame)[]
+            CanCommunicationUnit ArmServoCanFrame = new(
+                new()
+                {
+                    DestinationAddress = (CanDestinationAddress)3,
+                    SourceAddress = CanDestinationAddress.BroadCast,
+                    MessageType = CanDataType.Command
+                },
+                4
+            );
+            var canFrames = new (Action? Resetter, CanCommunicationUnit messageFrame)[]
             {
-                (true,CrawlersCanFrame),
-                (true,CrawlersUpDownCanFrame)
+                (null,CrawlersCanFrame),
+                (null,CrawlersUpDownCanFrame),
+                (() => {
+                    if(ArmServoCanFrame.Data.All(it => it == 255))
+                    {
+                        Array.Fill<byte>(ArmServoCanFrame.Data,0);
+                    }
+                }
+                ,ArmServoCanFrame)
             };
             
             var structuredModules= new ModuleGroup("modules",
@@ -82,21 +97,21 @@ namespace Wimm.Machines.Impl.Caucasus
                                 CrawlersUpDownCanFrame, CaucasusMotor.DriverPort.M2,
                                 speedModifierProvider
                             ),
-                            new CaucasusPCA9685Servo(
+                            new CaucasusServo(
                                 "grip","アーム掴みサーボ",
-                                0,180,parent.AdafruitServoDriver,0,speedModifierProvider
+                                0, 180, ArmServoCanFrame, 0, speedModifierProvider
                             ),
-                            new CaucasusPCA9685Servo(
+                            new CaucasusServo(
                                 "yaw", "アーム左右サーボ",
-                                0, 180, parent.AdafruitServoDriver, 1, speedModifierProvider
+                                0, 180, ArmServoCanFrame, 1, speedModifierProvider
                             ),
-                            new CaucasusPCA9685Servo(
+                            new CaucasusServo(
                                 "pitch", "アーム上下サーボ",
-                                0, 180, parent.AdafruitServoDriver, 2, speedModifierProvider
+                                0, 180, ArmServoCanFrame, 2, speedModifierProvider
                             ),
-                            new CaucasusPCA9685Servo(
+                            new CaucasusServo(
                                 "roll", "アームひねりサーボ",
-                                0, 180, parent.AdafruitServoDriver, 3, speedModifierProvider
+                                0, 180, ArmServoCanFrame, 3, speedModifierProvider
                             )
                         )
                     )
@@ -115,15 +130,9 @@ namespace Wimm.Machines.Impl.Caucasus
             public CaucasusControlProcess(Caucasus caucasus)
             {
                 Caucasus = caucasus;
-                foreach (var (needReset, message) in Caucasus.CanMessageFrames)
+                foreach (var (resetter, message) in Caucasus.CanMessageFrames)
                 {
-                    if (needReset)
-                    {
-                        for (int i = 0; i < message.Data.Length; i++)
-                        {
-                            message.Data[i] = 0;
-                        }
-                    }
+                    resetter?.Invoke();
                 }
             }
             public override void Dispose()
