@@ -17,30 +17,39 @@ void setup(){
   pinMode(STAT_LED1, OUTPUT); // CAN メッセージ受信したら光る
   pinMode(STAT_LED2, OUTPUT); // CAN制御信号が1秒途切れ(てセーフティが発動し)たら光る
 
-  if(Limit_Switch_For_M1_Enabled){
+  if((int)Limit_Switch_For_M1){
     //INPUT1の1番(基盤内側)のピン M1用リミットスイッチ LOW(GND)入力で平常時、HIGH(VCC)入力で強制モーター停止
     pinMode(INPUT1_1,INPUT_PULLUP);
+    if(Limit_Switch_For_M1 == Limit_Switch_Type::OR) pinMode(INPUT1_2,INPUT_PULLUP);
   }
-  if(Limit_Switch_For_M2_Enabled){
-    //INPUT1の2番(基盤外側)のピン M2用リミットスイッチ
-    pinMode(INPUT1_2,INPUT_PULLUP);
+  if((int)Limit_Switch_For_M2){
+    //INPUT2の2番(基盤外側)のピン M2用リミットスイッチ
+    pinMode(INPUT2_1,INPUT);
+    if(Limit_Switch_For_M2 == Limit_Switch_Type::OR) pinMode(INPUT2_2,INPUT);
   }
   motorInit();
 
   CanCom.begin(CAN_Self_Address, CAN_Speed);
   CanCom.onReceive(on_receive_can);
 
+  digitalWrite(STAT_LED1,HIGH);
+  digitalWrite(STAT_LED2,HIGH);
   Serial.println("Ready to Drive - motor driver on Caucasus");
   Serial.print("CAN destination ID is\"");
   Serial.print(CAN_Self_Address,DEC);
   Serial.println("\".");
-  if(Limit_Switch_For_M1_Enabled){
-    Serial.println("This board is accepting a limit switch input for M1 with INPUT1_1 pin.");
+  if((int)Limit_Switch_For_M1){
+    Serial.print("This board is accepting a limit switch input for M1 with INPUT1_1");
+    if(Limit_Switch_For_M1 == Limit_Switch_Type::OR) Serial.println(" pin and INPUT1_2 pin.");
+    else Serial.println(".");
   }
-  if(Limit_Switch_For_M2_Enabled){
-    Serial.println("This board is accepting a limit switch input for M2 with INPUT1_2 pin.");
+  if((int)Limit_Switch_For_M2){
+    Serial.print("This board is accepting a limit switch input for M2 with INPUT2_1");
+    if(Limit_Switch_For_M2 == Limit_Switch_Type::OR) Serial.println(" pin and INPUT2_2 pin.");
+    else Serial.println(".");
   }
   Serial.println("Git Repository - https://github.com/yuki-asagoe/Robot-Caucasus");
+  delay(100);
 }
 
 void loop(){
@@ -177,10 +186,12 @@ void warn(char* msg){
 bool is_limited_motor_of(int number){
   switch(number){
     case 1:
-      if(Limit_Switch_For_M1_Enabled) return digitalRead(INPUT1_1) == HIGH;
+      if(Limit_Switch_For_M1 == Limit_Switch_Type::OR) return (digitalRead(INPUT1_1) == HIGH) || (digitalRead(INPUT1_2) == HIGH);
+      else if(Limit_Switch_For_M1 == Limit_Switch_Type::Single) return digitalRead(INPUT1_1) == HIGH;
       else return false;
     case 2:
-      if(Limit_Switch_For_M2_Enabled) return digitalRead(INPUT1_2) == HIGH;
+      if(Limit_Switch_For_M2 == Limit_Switch_Type::OR) return (analogRead(INPUT2_1) > 512) || (analogRead(INPUT2_2) > 512);
+      else if(Limit_Switch_For_M2 == Limit_Switch_Type::Single) return analogRead(INPUT2_1) > 512;
       else return false;
   }
   warn("Illegal Motor Number in func is_limited_motor_of");
