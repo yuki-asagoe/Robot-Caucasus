@@ -13,7 +13,7 @@ namespace Wimm.Machines.Impl.Caucasus
         public override string Name => "コーカサス";
 
         public override Camera Camera { get; } = new Tpip4Camera(
-            "カメラ1"
+            "フロント","バック","アーム"
         );
         IEnumerable<(Action? Resetter, CanCommunicationUnit messageFrame)> CanMessageFrames { get; }
         public Caucasus(MachineConstructorArgs args) :base(args)
@@ -45,10 +45,19 @@ namespace Wimm.Machines.Impl.Caucasus
                 },
                 4
             );
-            CanCommunicationUnit ArmServoCanFrame = new(
+            CanCommunicationUnit MiscellaneousMotorCanFrame = new(
                 new()
                 {
                     DestinationAddress = (CanDestinationAddress)3,
+                    SourceAddress = CanDestinationAddress.BroadCast,
+                    MessageType = CanDataType.Command
+                },
+                4
+            );
+            CanCommunicationUnit ArmServoCanFrame = new(
+                new()
+                {
+                    DestinationAddress = (CanDestinationAddress)6,
                     SourceAddress = CanDestinationAddress.BroadCast,
                     MessageType = CanDataType.Command
                 },
@@ -94,7 +103,7 @@ namespace Wimm.Machines.Impl.Caucasus
                         ImmutableArray.Create<Module>(
                             new CaucasusMotor(
                                 "root","アーム根本モーター",
-                                CrawlersUpDownCanFrame, CaucasusMotor.DriverPort.M2,
+                                MiscellaneousMotorCanFrame, CaucasusMotor.DriverPort.M2,
                                 speedModifierProvider
                             ),
                             new CaucasusServo(
@@ -116,7 +125,24 @@ namespace Wimm.Machines.Impl.Caucasus
                         )
                     )
                 ),
-                ImmutableArray.Create<Module>()
+                ImmutableArray.Create<Module>(
+                    new CaucasusContainer(
+                        "container","救助者格納用コンテナ",
+                        new CaucasusMotor(
+                                "belt_rotater", "ベルト回転モーター",
+                                CrawlersUpDownCanFrame, CaucasusMotor.DriverPort.M2,
+                                speedModifierProvider
+                        ),
+                        new CaucasusMotor(
+                                "container_mover", "コンテナ出し入れモーター",
+                                MiscellaneousMotorCanFrame, CaucasusMotor.DriverPort.M1,
+                                speedModifierProvider
+                        )
+                    ),
+                    new OtherFeatureProvider(
+                        "other","その他機能提供モジュール",ArmServoCanFrame
+                    )
+                )
             );
             return (canFrames, structuredModules);
         }
