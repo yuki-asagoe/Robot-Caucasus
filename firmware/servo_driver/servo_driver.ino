@@ -6,12 +6,14 @@
 #include "variables.h"
 
 void on_receive_can(uint16_t, const int8_t*, uint8_t);
+void on_error_occur(uint8_t,uint8_t);
 void set_servo_angle(uint8_t, int);
 void set_servo_pulse(uint8_t, double);
 void warn(char*);
 
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 unsigned long long last_can_timestamp=0;
+unsigned long long last_error_timestamp=0;
 
 void setup(){
   Serial.begin(115200);
@@ -41,7 +43,14 @@ void loop(){
   //データ受信を確認し必要ならonReceiveで登録したリスナを呼び出す
   CanCom.tasks();
   unsigned long long now=millis();
-  if(now - last_can_timestamp > 1000){ //信号途絶
+  if(now - last_error_timestamp < 1000){ // 直近のエラーから1秒以内
+    if((long)((now-last_error_timestamp)/100.0) & 1 == 1){// 100ms 間隔
+      digitalWrite(STAT_LED2,HIGH);
+    }else{
+      digitalWrite(STAT_LED2,LOW);
+    }
+  }
+  else if(now - last_can_timestamp > 1000){ //信号途絶
     digitalWrite(STAT_LED2,HIGH);
   }else{
     digitalWrite(STAT_LED2,LOW);    
@@ -111,6 +120,13 @@ void on_receive_can(uint16_t std_id, const int8_t *data, uint8_t len) {
     }
     Serial.println("");
   }
+}
+
+void on_error_occur(uint8_t interrupted,uint8_t error_status){
+  last_error_timestamp=millis();
+  Serial.print("CAN Error: CODE[");
+  Serial.print(error_status,HEX);
+  Serial.println("]");
 }
 
 void warn(char* msg){
