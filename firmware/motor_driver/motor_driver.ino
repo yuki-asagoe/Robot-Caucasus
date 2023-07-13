@@ -15,7 +15,7 @@ unsigned long long limit_switch_output_timer_2=0;
 void setup(){
   Serial.begin(115200);
   pinMode(STAT_LED1, OUTPUT); // CAN メッセージ受信したら光る
-  pinMode(STAT_LED2, OUTPUT); // CAN制御信号が1秒途切れ(てセーフティが発動し)たら光る
+  pinMode(STAT_LED2, OUTPUT); // CAN制御信号が1秒途切れ(てセーフティが発動し)たら光る, セーフティ非動作中はリミットスイッチの入力検知で点滅
 
   if((int)Limit_Switch_For_M1){
     //INPUT1の1番(基盤内側)のピン M1用リミットスイッチ LOW(GND)入力で平常時、HIGH(VCC)入力で強制モーター停止
@@ -56,19 +56,29 @@ void loop(){
   //データ受信を確認し必要ならonReceiveで登録したリスナを呼び出す
   CanCom.tasks();
   unsigned long long now=millis();
+  bool motor1_limited=is_limited_motor_of(1);
+  bool motor2_limited=is_limited_motor_of(2);
   if(now - last_can_timestamp > 1000){ //セーフティストッパー
     motorStop(1);
     motorStop(2);
     digitalWrite(STAT_LED2,HIGH);
   }else{
-    digitalWrite(STAT_LED2,LOW);    
+    if(motor1_limited || motor2_limited){//リミットスイッチ検知
+      if((now/200) & 1 == 1){//200ms間隔
+        digitalWrite(STAT_LED2,HIGH);
+      }else{
+        digitalWrite(STAT_LED2,LOW);
+      }
+    }else{
+      digitalWrite(STAT_LED2,LOW);
+    }
   }
   if(now -last_can_timestamp < 100){
     digitalWrite(STAT_LED1,HIGH);
   }else{
-    digitalWrite(STAT_LED1,LOW);    
+    digitalWrite(STAT_LED1,LOW);
   }
-  if(is_limited_motor_of(1)){
+  if(motor1_limited){
     ///300秒間隔でリミットスイッチ押下のフィードバック
     if(now - limit_switch_output_timer_1>300){
       Serial.println("M1:Stopping - Reaching Limit");
@@ -76,7 +86,7 @@ void loop(){
     }
     motorStop(1);
   }
-  if(is_limited_motor_of(2)){
+  if(motor2_limited){
     if(now - limit_switch_output_timer_2>300){
       Serial.println("M2:Stopping - Reaching Limit");
       limit_switch_output_timer_2=now;
