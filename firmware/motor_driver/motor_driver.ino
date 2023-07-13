@@ -4,13 +4,26 @@
 
 #include "variables.h"
 
+enum class Motor_Limitation : int{
+  //制限なし
+  Free = 0,
+  //正転停止
+  Forward,
+  //逆転停止
+  Backward,
+  //全停止
+  All
+};
+
 void on_receive_can(uint16_t, const int8_t*, uint8_t);
 void warn(char*);
-bool is_limited_motor_of(int number);
+Motor_Limitation get_motor_limitation_of(int number);
 
 unsigned long long last_can_timestamp=0;
 unsigned long long limit_switch_output_timer_1=0;
 unsigned long long limit_switch_output_timer_2=0;
+signed int motor1_direction=0;
+signed int motor2_direction=0;
 
 void setup(){
   Serial.begin(115200);
@@ -56,14 +69,14 @@ void loop(){
   //データ受信を確認し必要ならonReceiveで登録したリスナを呼び出す
   CanCom.tasks();
   unsigned long long now=millis();
-  bool motor1_limited=is_limited_motor_of(1);
-  bool motor2_limited=is_limited_motor_of(2);
+  Motor_Limitation motor1_limit=get_motor_limitation_of(1);
+  Motor_Limitation motor2_limit=get_motor_limitation_of(2);
   if(now - last_can_timestamp > 1000){ //セーフティストッパー
     motorStop(1);
     motorStop(2);
     digitalWrite(STAT_LED2,HIGH);
   }else{
-    if(motor1_limited || motor2_limited){//リミットスイッチ検知
+    if((int)motor1_limit || (int)motor2_limit){//リミットスイッチ検知
       if((now/200) & 1 == 1){//200ms間隔
         digitalWrite(STAT_LED2,HIGH);
       }else{
@@ -78,20 +91,32 @@ void loop(){
   }else{
     digitalWrite(STAT_LED1,LOW);
   }
-  if(motor1_limited){
+  if((int)motor1_limit){
     ///300秒間隔でリミットスイッチ押下のフィードバック
     if(now - limit_switch_output_timer_1>300){
-      Serial.println("M1:Stopping - Reaching Limit");
+      Serial.println("M1: Reaching Limit");
       limit_switch_output_timer_1=now;
     }
-    motorStop(1);
+    if(motor1_limit==Motor_Limitation::All){
+      motorStop(1);
+    }else if(motor1_direction > 0 && motor1_limit==Motor_Limitation::Forward){
+      motorStop(1);
+    }else if(motor1_direction < 0 && motor1_limit==Motor_Limitation::Backward){
+      motorStop(1);
+    }
   }
-  if(motor2_limited){
+  if((int)motor2_limit){
     if(now - limit_switch_output_timer_2>300){
-      Serial.println("M2:Stopping - Reaching Limit");
+      Serial.println("M2: Reaching Limit");
       limit_switch_output_timer_2=now;
     }
-    motorStop(2);
+    if(motor2_limit==Motor_Limitation::All){
+      motorStop(2);
+    }else if(motor2_direction > 0 && motor2_limit==Motor_Limitation::Forward){
+      motorStop(2);
+    }else if(motor2_direction < 0 && motor2_limit==Motor_Limitation::Backward){
+      motorStop(2);
+    }
   }
 }
 
@@ -116,6 +141,9 @@ void on_receive_can(uint16_t std_id, const int8_t *data, uint8_t len) {
     Serial.println("");
   }
   
+  Motor_Limitation motor1_limit=get_motor_limitation_of(1);
+  Motor_Limitation motor2_limit=get_motor_limitation_of(2);
+
   switch(msg_type){
     case CAN_DATA_TYPE_COMMAND:{
       if(len!=4){
@@ -123,55 +151,75 @@ void on_receive_can(uint16_t std_id, const int8_t *data, uint8_t len) {
         return;
       }
       //M1のパース
-      if(is_limited_motor_of(1)){
-        Serial.println("M1:Stopping - Reaching Limit");
-        motorStop(1);
-      }
       else if(data[0]==0){
         Serial.println("M1:Stopping");
         motorStop(1);
+        motor1_direction=0;
       }
       else if(data[0]==-128){
         Serial.println("M1:Free");
         motorFree(1);
+        motor1_direction=0;
       }
       else if(data[0]>0){
-        Serial.print("M1:Driving / ");
-        Serial.print((uint8_t)data[1],DEC);
-        Serial.println("");        
-        motorWrite(1,(uint8_t)data[1]);
+        if(motor1_limit==Motor_Limitation::Forward || motor1_limit==Motor_Limitation::All){
+          Serial.println("M1:Stopping - Reaching Limit(+)");
+          motorStop(1);
+        }else{
+          Serial.print("M1:Driving / ");
+          Serial.print((uint8_t)data[1],DEC);
+          Serial.println("");        
+          motorWrite(1,(uint8_t)data[1]);
+          motor1_direction=1;
+        }
       }
       else {
-        Serial.print("M1:Driving / -");
-        Serial.print((uint8_t)data[1],DEC);
-        Serial.println("");        
-        motorWrite(1,-(uint8_t)data[1]);
+        if(motor1_limit==Motor_Limitation::Backward || motor1_limit==Motor_Limitation::All){
+          Serial.println("M1:Stopping - Reaching Limit(-)");
+          motorStop(1);
+        }else{
+          Serial.print("M1:Driving / -");
+          Serial.print((uint8_t)data[1],DEC);
+          Serial.println("");        
+          motorWrite(1,-(uint8_t)data[1]);
+          motor1_direction=-1;
+        }
       }
 
       //M2のパース
-      if(is_limited_motor_of(2)){
-        Serial.println("M2:Stopping - Reaching Limit");
-        motorStop(2);
-      }
-      else if(data[2]==0){
+      if(data[2]==0){
         Serial.println("M2:Stopping");
         motorStop(2);
+        motor2_direction=0;
       }
       else if(data[2]==-128){
         Serial.println("M2:Free");
         motorFree(2);
+        motor2_direction=0;
       }
       else if(data[2]>0){
-        Serial.print("M2:Driving / ");
-        Serial.print((uint8_t)data[1],DEC);
-        Serial.println("");       
-        motorWrite(2,(uint8_t)data[3]);
+        if(motor2_limit==Motor_Limitation::Forward || motor2_limit==Motor_Limitation::All){
+          Serial.println("M1:Stopping - Reaching Limit(+)");
+          motorStop(2);
+        }else{
+          Serial.print("M2:Driving / ");
+          Serial.print((uint8_t)data[1],DEC);
+          Serial.println("");       
+          motorWrite(2,(uint8_t)data[3]);
+          motor2_direction=1;
+        }
       }
       else {
-        Serial.print("M2:Driving / -");
-        Serial.print((uint8_t)data[1],DEC);
-        Serial.println("");       
-        motorWrite(2,-(uint8_t)data[3]);
+        if(motor2_limit==Motor_Limitation::Backward || motor2_limit==Motor_Limitation::All){
+          Serial.println("M1:Stopping - Reaching Limit(-)");
+          motorStop(2);
+        }else{
+          Serial.print("M2:Driving / -");
+          Serial.print((uint8_t)data[1],DEC);
+          Serial.println("");       
+          motorWrite(2,-(uint8_t)data[3]);
+          motor2_direction=-1;
+        }
       }
       break;      
     }
@@ -179,6 +227,8 @@ void on_receive_can(uint16_t std_id, const int8_t *data, uint8_t len) {
       Serial.println("Emergency Code Detected : All Motors are stopping");
       motorStop(1);
       motorStop(2);
+      motor1_direction=0;
+      motor2_direction=0;
       break;
     }
     Serial.println("");
@@ -193,17 +243,55 @@ void warn(char* msg){
   Serial.println(")");
 }
 
-bool is_limited_motor_of(int number){
+Motor_Limitation get_motor_limitation_of(int number){
   switch(number){
     case 1:
-      if(Limit_Switch_For_M1 == Limit_Switch_Type::OR) return (digitalRead(INPUT1_1) == HIGH) || (digitalRead(INPUT1_2) == HIGH);
-      else if(Limit_Switch_For_M1 == Limit_Switch_Type::Single) return digitalRead(INPUT1_1) == HIGH;
-      else return false;
+      if(Limit_Switch_For_M1 == Limit_Switch_Type::OR){ 
+
+        bool input1=digitalRead(INPUT1_1) == HIGH;
+        bool input2=digitalRead(INPUT1_2) == HIGH;
+
+        if(input1){
+          if(input2){
+            return Motor_Limitation::All;
+          }else{
+            return Motor_Limitation::Forward;
+          }
+        }else if(input2){
+          return Motor_Limitation::Backward;
+        }else{
+          return Motor_Limitation::Free;
+        }
+
+      }else if(Limit_Switch_For_M1 == Limit_Switch_Type::Single){ 
+        return digitalRead(INPUT1_1) == HIGH ? Motor_Limitation::Forward : Motor_Limitation::Free;
+      }else{ 
+        return Motor_Limitation::Free;
+      }
     case 2:
-      if(Limit_Switch_For_M2 == Limit_Switch_Type::OR) return (analogRead(INPUT2_1) > 512) || (analogRead(INPUT2_2) > 512);
-      else if(Limit_Switch_For_M2 == Limit_Switch_Type::Single) return analogRead(INPUT2_1) > 512;
-      else return false;
+      if(Limit_Switch_For_M2 == Limit_Switch_Type::OR){
+        
+        bool input1=analogRead(INPUT2_1) > 512;
+        bool input2=analogRead(INPUT2_2) > 512;
+
+        if(input1){
+          if(input2){
+            return Motor_Limitation::All;
+          }else{
+            return Motor_Limitation::Forward;
+          }
+        }else if(input2){
+          return Motor_Limitation::Backward;
+        }else{
+          return Motor_Limitation::Free;
+        }
+
+      }
+      else if(Limit_Switch_For_M2 == Limit_Switch_Type::Single){
+        return analogRead(INPUT2_1) > 512 ? Motor_Limitation::Forward : Motor_Limitation::Free;
+      }
+      else return Motor_Limitation::Free;
   }
-  warn("Illegal Motor Number in func is_limited_motor_of");
-  return true;
+  warn("Illegal Motor Number in func get_motor_limitation_of");
+  return Motor_Limitation::Free;
 }
