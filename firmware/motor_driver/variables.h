@@ -10,6 +10,6 @@ enum class Limit_Switch_Type : int{
   OR=2
 };
 
-const Limit_Switch_Type Limit_Switch_For_M1 = Limit_Switch_Type::Disabled;
-const Limit_Switch_Type Limit_Switch_For_M2 = Limit_Switch_Type::Disabled;
+const Limit_Switch_Type Limit_Switch_For_M1 = Limit_Switch_Type::Disable;
+const Limit_Switch_Type Limit_Switch_For_M2 = Limit_Switch_Type::Disable;
 const bool Detailed_Logging_Enabled=true;

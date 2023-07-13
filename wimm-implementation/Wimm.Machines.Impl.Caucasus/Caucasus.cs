@@ -65,8 +65,9 @@ namespace Wimm.Machines.Impl.Caucasus
             );
             var canFrames = new (Action? Resetter, CanCommunicationUnit messageFrame)[]
             {
-                (null,CrawlersCanFrame),
-                (null,CrawlersUpDownCanFrame),
+                (()=>{ Array.Fill<byte>(CrawlersCanFrame.Data,0); },CrawlersCanFrame),
+                (()=>{ Array.Fill<byte>(CrawlersUpDownCanFrame.Data,0); },CrawlersUpDownCanFrame),
+                (()=>{ Array.Fill<byte>(MiscellaneousMotorCanFrame.Data,0); },MiscellaneousMotorCanFrame),
                 (() => {
                     if(ArmServoCanFrame.Data.All(it => it == 255))
                     {
