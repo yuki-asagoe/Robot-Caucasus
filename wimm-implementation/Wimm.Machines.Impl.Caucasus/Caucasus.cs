@@ -71,7 +71,7 @@ namespace Wimm.Machines.Impl.Caucasus
                 (() => {
                     if(ArmServoCanFrame.Data.All(it => it == 255))
                     {
-                        Array.Fill<byte>(ArmServoCanFrame.Data,0);
+                        Array.Fill<byte>(ArmServoCanFrame.Data,90);
                     }
                 }
                 ,ArmServoCanFrame)
@@ -109,15 +109,15 @@ namespace Wimm.Machines.Impl.Caucasus
                             ),
                             new CaucasusServo(
                                 "grip","アーム掴みサーボ",
-                                0, 180, ArmServoCanFrame, 0, speedModifierProvider
+                                90, 180, ArmServoCanFrame, 0, speedModifierProvider
                             ),
                             new CaucasusServo(
                                 "yaw", "アーム左右サーボ",
-                                0, 180, ArmServoCanFrame, 1, speedModifierProvider
+                                45, 135, ArmServoCanFrame, 1, speedModifierProvider
                             ),
                             new CaucasusServo(
                                 "pitch", "アーム上下サーボ",
-                                0, 180, ArmServoCanFrame, 2, speedModifierProvider
+                                20, 90, ArmServoCanFrame, 2, speedModifierProvider
                             ),
                             new CaucasusServo(
                                 "roll", "アームひねりサーボ",
