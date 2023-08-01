@@ -10,7 +10,7 @@ namespace Wimm.Machines.Impl.Caucasus.Component
 {
     // Hiwonder LD-220MG
     // PWM周波数は50Hz(周期20ms),パルス幅0.5ms~2.5ms
-    internal class CaucasusServo : ServoMotor
+    internal class CaucasusServo : ServoMotor, IObserver<ServoResetInfo>
     {
         Func<double> SpeedModifierProvider { get; }
         const double MaxSpeed = 15;
@@ -45,8 +45,19 @@ namespace Wimm.Machines.Impl.Caucasus.Component
         {
             CanFrame.Data[Index] = (byte)Angle;
         }
+
+        public void OnCompleted(){ }
+
+        public void OnError(Exception error){ }
+
+        public void OnNext(ServoResetInfo value)
+        {
+            SetAngleImpl(90,1);
+        }
+
         public override string ModuleName => "コーカサス サーボモーター";
 
         public override string ModuleDescription => "コーカサス搭載のサーボモーターデフォルト実装 for Hiwonder LD-220MG";
     }
+    internal struct ServoResetInfo { }
 }

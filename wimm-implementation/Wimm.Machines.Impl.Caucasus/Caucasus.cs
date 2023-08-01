@@ -4,11 +4,14 @@ using System.Collections.Immutable;
 using Wimm.Machines.Impl.Caucasus.Can;
 using Wimm.Machines.Impl.Caucasus.Component;
 using Wimm.Machines.Impl.Caucasus.PCA9685;
+using Wimm.Machines.Extension;
+using Wimm.Machines.TpipForRasberryPi.Import;
+using System.Runtime.InteropServices;
 
 namespace Wimm.Machines.Impl.Caucasus
 {
     [LoadTarget]
-    public class Caucasus : TpipForRasberryPiMachine
+    public class Caucasus : TpipForRasberryPiMachine, IPowerVoltageProvidable
     {
         public override string Name => "コーカサス";
 
@@ -16,6 +19,21 @@ namespace Wimm.Machines.Impl.Caucasus
             "フロント","バック","アーム"
         );
         IEnumerable<(Action? Resetter, CanCommunicationUnit messageFrame)> CanMessageFrames { get; }
+
+        public double MaxVoltage => 30;
+
+        public double MinVoltage => 0;
+
+        public double Voltage
+        {
+            get
+            {
+                var data = new TPJT4.INP_DT_STR[1];
+                TPJT4.NativeMethods.get_sens(data, Marshal.SizeOf<TPJT4.INP_DT_STR>());
+                return data[0].batt / 300.0;
+            }
+        }
+
         public Caucasus(MachineConstructorArgs args) :base(args)
         {
             if (Camera is Tpip4Camera camera){ Hwnd?.AddHook(camera.WndProc); }
@@ -63,20 +81,15 @@ namespace Wimm.Machines.Impl.Caucasus
                 },
                 4
             );
+
+            var servoResetNotificator = new ServoResetNotificator();
             var canFrames = new (Action? Resetter, CanCommunicationUnit messageFrame)[]
             {
                 (()=>{ Array.Fill<byte>(CrawlersCanFrame.Data,0); },CrawlersCanFrame),
                 (()=>{ Array.Fill<byte>(CrawlersUpDownCanFrame.Data,0); },CrawlersUpDownCanFrame),
                 (()=>{ Array.Fill<byte>(MiscellaneousMotorCanFrame.Data,0); },MiscellaneousMotorCanFrame),
-                (() => {
-                    if(ArmServoCanFrame.Data.All(it => it == 255))
-                    {
-                        Array.Fill<byte>(ArmServoCanFrame.Data,90);
-                    }
-                }
-                ,ArmServoCanFrame)
+                (() => {if(servoResetNotificator.ResetNeeded)servoResetNotificator.Notify(); },ArmServoCanFrame)
             };
-            
             var structuredModules= new ModuleGroup("modules",
                 ImmutableArray.Create(
                     new ModuleGroup("crawlers",
@@ -110,19 +123,31 @@ namespace Wimm.Machines.Impl.Caucasus
                             new CaucasusServo(
                                 "grip","アーム掴みサーボ",
                                 90, 180, ArmServoCanFrame, 0, speedModifierProvider
-                            ),
+                            ).Apply(it =>
+                            {
+                                servoResetNotificator.Subscribe(it);
+                            }),
                             new CaucasusServo(
                                 "yaw", "アーム左右サーボ",
                                 45, 135, ArmServoCanFrame, 1, speedModifierProvider
-                            ),
+                            ).Apply(it =>
+                            {
+                                servoResetNotificator.Subscribe(it);
+                            }),
                             new CaucasusServo(
                                 "pitch", "アーム上下サーボ",
                                 20, 90, ArmServoCanFrame, 2, speedModifierProvider
-                            ),
+                            ).Apply(it =>
+                            {
+                                servoResetNotificator.Subscribe(it);
+                            }),
                             new CaucasusServo(
                                 "roll", "アームひねりサーボ",
                                 0, 180, ArmServoCanFrame, 3, speedModifierProvider
-                            )
+                            ).Apply(it =>
+                            {
+                                servoResetNotificator.Subscribe(it);
+                            })
                         )
                     )
                 ),
@@ -142,11 +167,49 @@ namespace Wimm.Machines.Impl.Caucasus
                     ),
                     new OtherFeatureProvider(
                         "other","その他機能提供モジュール",ArmServoCanFrame
-                    )
+                    ).Apply(it =>
+                    {
+                        it.OnAngleReset += servoResetNotificator.OnReset;
+                    })
                 )
             );
             return (canFrames, structuredModules);
         }
+        class ServoResetNotificator : IObservable<ServoResetInfo>
+        {
+            LinkedList<IObserver<ServoResetInfo>> Observers { get; } = new LinkedList<IObserver<ServoResetInfo>>();
+            public IDisposable Subscribe(IObserver<ServoResetInfo> observer)
+            {
+                Observers.AddLast(observer);
+                return new Unsubscriber(observer, this);
+            }
+            public bool ResetNeeded { get; private set; } = false;
+            public void OnReset()
+            {
+                ResetNeeded = true;
+            }
+            public void Notify()
+            {
+                if (ResetNeeded)
+                {
+                    var info = new ServoResetInfo();
+                    foreach (var i in Observers)
+                    {
+                        i.OnNext(info);
+                    }
+                    ResetNeeded = false;
+                }
+            }
+            record Unsubscriber(IObserver<ServoResetInfo> Observer, ServoResetNotificator Owner) : IDisposable
+            {
+                public void Dispose()
+                {
+                    Owner.Observers.Remove(Observer);
+                }
+            }
+        }
+
+
         protected override ControlProcess StartControlProcess()
         {
             return new CaucasusControlProcess(this);
@@ -170,6 +233,14 @@ namespace Wimm.Machines.Impl.Caucasus
                 }
                 base.Dispose();
             }
+        }
+    }
+    static class ModuleExtension
+    {
+        public static T Apply<T>(this T module, Action<T> initializer) where T : Module
+        {
+            initializer(module);
+            return module;
         }
     }
 }
