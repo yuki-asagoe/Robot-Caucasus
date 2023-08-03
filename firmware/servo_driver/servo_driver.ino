@@ -141,7 +141,7 @@ void set_servo_angle(uint8_t n, int deg) {
   if(deg < 0) deg = 0;
   if(deg > Servo_Max_Angle[n]) deg = Servo_Max_Angle[n];
   double width = Servo_Max_Pulse_Width[n] - Servo_Min_Pulse_Width[n]; //パルス幅の変域の大きさ、ミリ秒
-  double pulse = (deg / Servo_Max_Angle[n]) * width + Servo_Min_Pulse_Width[n]; //やってることは単なる線形補完のようなもの
+  double pulse = (((double)deg) / Servo_Max_Angle[n]) * width + Servo_Min_Pulse_Width[n]; //やってることは単なる線形補完のようなもの
   set_servo_pulse(n, pulse);
 }
 
