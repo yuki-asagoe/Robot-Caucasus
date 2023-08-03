@@ -28,7 +28,7 @@ namespace Wimm.Machines.Impl.Caucasus.Component
         );
         public void SetAngleImpl(double angle, double speed)
         {
-            Angle += angle;
+            Angle = angle;
             ApplyAngle();
         }
 
