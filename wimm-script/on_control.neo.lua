@@ -34,20 +34,20 @@ if input.IsRightThumbLeft(gamepad) then
 	end
 end
 if input.IsLeftThumbUp(gamepad) then
-	modules.arm.root.rotate(1)
+	go_straight()
 end
 if input.IsLeftThumbDown(gamepad) then
-	modules.arm.root.rotate(-1)
+	go_back()
 end
 if input.IsLeftThumbRight(gamepad) then
-	modules.arm.yaw.rotate(1)
+	turn_right()
 end
 if input.IsLeftThumbLeft(gamepad) then
-	modules.arm.yaw.rotate(-1)
+	turn_left()
 end
 if input.IsButtonDown(gamepad,buttons.RightShoulder) then
 	modules.container.move_container(1)
-	modules.container.rotate_belt(1)
+	modules.container.rotate_belt(0.5)
 end
 if gamepad.RightTrigger > 30 then
 	modules.container.move_container(-1)
@@ -58,9 +58,9 @@ end
 if gamepad.LeftTrigger > 30 then
 	modules.crawlers.updown.rotate(-1)
 end
-if input.IsButtonDown(gamepad,buttons.Y) then
+if input.IsButtonDown(gamepad,buttons.B) then
 	modules.container.rotate_belt(1)
 end
-if input.IsButtonDown(gamepad,buttons.X) then
+if input.IsButtonDown(gamepad,buttons.Y) then
 	modules.container.rotate_belt(-1)
 end

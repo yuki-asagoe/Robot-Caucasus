@@ -3,10 +3,8 @@
 -- 引数にbuttonsとkeysが与えられます。
 -- buttons : Votice.XInput.GamepadButtons
 -- keys : 未定、現在参照できません map関数の入力は受け入れますが何もしません
-map({},{buttons.DPadUp},go_straight)
-map({},{buttons.DPadDown},go_back)
-map({},{buttons.DPadRight},turn_right)
-map({},{buttons.DPadLeft},turn_left)
-map({},{buttons.A},grip_down)
-map({},{buttons.B},grip_up)
+map({},{buttons.DPadUp},root_up)
+map({},{buttons.DPadDown},root_down)
+map({},{buttons.X},grip_down)
+map({},{buttons.A},grip_up)
 map({},{buttons.LeftThumb},reset_arm)

@@ -25,11 +25,17 @@ end
 function grip_up()
 	modules.arm.grip.rotate(-1)
 end
-function yaw_up()
+function yaw_right()
 	modules.arm.yaw.rotate(1)
 end
-function yaw_down()
+function yaw_left()
 	modules.arm.yaw.rotate(-1)
+end
+function root_up()
+	modules.arm.root.rotate(1)
+end
+function root_down()
+	modules.arm.root.rotate(-1)
 end
 function roll_right()
 	modules.arm.roll.rotate(1)
@@ -37,10 +43,10 @@ end
 function roll_left()
 	modules.arm.roll.rotate(-1)
 end
-function pitch_right()
+function pitch_up()
 	modules.arm.pitch.rotate(1)
 end
-function pitch_left()
+function pitch_down()
 	modules.arm.pitch.rotate(-1)
 end
 function rotate_belt()
