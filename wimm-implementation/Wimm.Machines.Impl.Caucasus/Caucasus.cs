@@ -7,6 +7,7 @@ using Wimm.Machines.Impl.Caucasus.PCA9685;
 using Wimm.Machines.Extension;
 using Wimm.Machines.TpipForRasberryPi.Import;
 using System.Runtime.InteropServices;
+using Wimm.Common;
 
 namespace Wimm.Machines.Impl.Caucasus
 {
@@ -36,12 +37,8 @@ namespace Wimm.Machines.Impl.Caucasus
 
         public Caucasus(MachineConstructorArgs args) :base(args)
         {
-            if (Camera is Tpip4Camera camera){ Hwnd?.AddHook(camera.WndProc); }
+            if (args is not null && Camera is Tpip4Camera camera){ Hwnd?.AddHook(camera.WndProc); }
             (CanMessageFrames,StructuredModules)  = CreateStructuredModule(()=>SpeedModifier);
-        }
-        public Caucasus() : base()
-        {
-            (CanMessageFrames,StructuredModules) = CreateStructuredModule(()=>SpeedModifier);
         }
         private static (IEnumerable<(Action? Resetter, CanCommunicationUnit messageFrame)>,ModuleGroup) CreateStructuredModule(Func<double> speedModifierProvider)
         {

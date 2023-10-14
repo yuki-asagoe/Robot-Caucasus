@@ -1,6 +1,8 @@
 ﻿using Wimm.Machines.Component;
 using Wimm.Machines.Impl.Caucasus.Can;
 
+using Wimm.Common;
+
 namespace Wimm.Machines.Impl.Caucasus.Component
 {
     internal class CaucasusMotor : Motor

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Wimm.Machines.Component;
+using Wimm.Common;
 
 namespace Wimm.Machines.Impl.Caucasus.Component
 {
