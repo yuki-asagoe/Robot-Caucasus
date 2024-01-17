@@ -1,42 +1,21 @@
 ﻿using Wimm.Machines.TpipForRasberryPi;
-using Wimm.Machines.Video;
 using System.Collections.Immutable;
 using Wimm.Machines.Impl.Caucasus.Can;
 using Wimm.Machines.Impl.Caucasus.Component;
-using Wimm.Machines.Impl.Caucasus.PCA9685;
-using Wimm.Machines.Extension;
-using Wimm.Machines.TpipForRasberryPi.Import;
-using System.Runtime.InteropServices;
 using Wimm.Common;
 
 namespace Wimm.Machines.Impl.Caucasus
 {
     [LoadTarget]
-    public class Caucasus : TpipForRasberryPiMachine, IPowerVoltageProvidable
+    public class Caucasus : TpipForRasberryPiMachine
     {
         public override string Name => "コーカサス";
 
-        public override Camera Camera { get; } = new Tpip4Camera(
-            "フロント","バック","アーム"
-        );
         IEnumerable<(Action? Resetter, CanCommunicationUnit messageFrame)> CanMessageFrames { get; }
-
-        public double MaxVoltage => 30;
-
-        public double MinVoltage => 0;
-
-        public double Voltage
-        {
-            get
-            {
-                var data = new TPJT4.INP_DT_STR[1];
-                TPJT4.NativeMethods.get_sens(data, Marshal.SizeOf<TPJT4.INP_DT_STR>());
-                return data[0].batt / 300.0;
-            }
-        }
 
         public Caucasus(MachineConstructorArgs args) :base(args)
         {
+            Camera = new Tpip4Camera("フロント", "バック", "アーム");
             if (args is not null && Camera is Tpip4Camera camera){ Hwnd?.AddHook(camera.WndProc); }
             (CanMessageFrames,StructuredModules)  = CreateStructuredModule(()=>SpeedModifier);
         }
