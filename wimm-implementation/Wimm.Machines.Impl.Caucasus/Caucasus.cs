@@ -13,7 +13,7 @@ namespace Wimm.Machines.Impl.Caucasus
 
         IEnumerable<(Action? Resetter, CanCommunicationUnit messageFrame)> CanMessageFrames { get; }
 
-        public Caucasus(MachineConstructorArgs args) :base(args)
+        public Caucasus(MachineConstructorArgs? args) :base(args)
         {
             Camera = new Tpip4Camera("フロント", "バック", "アーム");
             if (args is not null && Camera is Tpip4Camera camera){ Hwnd?.AddHook(camera.WndProc); }
@@ -69,8 +69,8 @@ namespace Wimm.Machines.Impl.Caucasus
             var structuredModules= new ModuleGroup("modules",
                 ImmutableArray.Create(
                     new ModuleGroup("crawlers",
-                        ImmutableArray.Create<ModuleGroup>(),
-                        ImmutableArray.Create<Module>(
+                        [],
+                        [
                             new CaucasusMotor(
                                 "right","機動用右クローラー",
                                 CrawlersCanFrame,CaucasusMotor.DriverPort.M1,
@@ -86,11 +86,11 @@ namespace Wimm.Machines.Impl.Caucasus
                                 CrawlersUpDownCanFrame, CaucasusMotor.DriverPort.M1,
                                 speedModifierProvider
                             )
-                        )
+                        ]
                     ),
                     new ModuleGroup("arm",
-                        ImmutableArray.Create<ModuleGroup>(),
-                        ImmutableArray.Create<Module>(
+                        [],
+                        [
                             new CaucasusMotor(
                                 "root","アーム根本モーター",
                                 MiscellaneousMotorCanFrame, CaucasusMotor.DriverPort.M2,
@@ -124,10 +124,10 @@ namespace Wimm.Machines.Impl.Caucasus
                             {
                                 servoResetNotificator.Subscribe(it);
                             })
-                        )
+                        ]
                     )
                 ),
-                ImmutableArray.Create<Module>(
+                [
                     new CaucasusContainer(
                         "container","救助者格納用コンテナ",
                         new CaucasusMotor(
@@ -147,7 +147,7 @@ namespace Wimm.Machines.Impl.Caucasus
                     {
                         it.OnAngleReset += servoResetNotificator.OnReset;
                     })
-                )
+                ]
             );
             return (canFrames, structuredModules);
         }
